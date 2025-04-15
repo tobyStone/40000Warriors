@@ -286,20 +286,20 @@ class NPC:
         if self.has_quest and not self.quest_completed:
             # Yellow exclamation mark
             pygame.draw.rect(surface, (255, 255, 0), 
-                            (self.x + self.width/2 - 2, self.y - 25, 4, 15))
+                             (self.x + self.width/2 - 2, self.y - 25, 4, 15))
             pygame.draw.circle(surface, (255, 255, 0), 
-                              (int(self.x + self.width/2), int(self.y - 30)), 
-                              4)
+                               (int(self.x + self.width/2), int(self.y - 30)), 
+                               4)
         
         # Draw quest completed indicator
         if self.quest_completed:
             # Green check mark
             pygame.draw.line(surface, (0, 255, 0), 
-                            (self.x + self.width/2 - 5, self.y - 20),
-                            (self.x + self.width/2, self.y - 15), 3)
+                             (self.x + self.width/2 - 5, self.y - 20),
+                             (self.x + self.width/2, self.y - 15), 3)
             pygame.draw.line(surface, (0, 255, 0), 
-                            (self.x + self.width/2, self.y - 15),
-                            (self.x + self.width/2 + 8, self.y - 25), 3)
+                             (self.x + self.width/2, self.y - 15),
+                             (self.x + self.width/2 + 8, self.y - 25), 3)
 
 
 class DialogueSystem:
@@ -326,9 +326,9 @@ class DialogueSystem:
         self.box_x = 50
         self.box_y = screen_height - 200
         
-        # Animation
+        # Text animation
         self.text_animation_index = 0
-        self.text_animation_speed = 2  # characters per frame
+        self.text_animation_speed = 2  # characters per update tick
         self.text_animation_active = False
         self.last_animation_update = 0
         
@@ -349,8 +349,11 @@ class DialogueSystem:
         npc_types = ["soldier", "tech_priest", "inquisitor", "commissar", "civilian", "servitor"]
         for npc_type in npc_types:
             try:
-                portrait_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
-                                           "assets", f"{npc_type}_portrait.png")
+                portrait_path = os.path.join(
+                    os.path.dirname(os.path.dirname(__file__)), 
+                    "assets", 
+                    f"{npc_type}_portrait.png"
+                )
                 if os.path.exists(portrait_path):
                     self.portraits[npc_type] = pygame.image.load(portrait_path).convert_alpha()
                     self.portraits[npc_type] = pygame.transform.scale(self.portraits[npc_type], (80, 80))
@@ -392,6 +395,7 @@ class DialogueSystem:
         """End the current dialogue"""
         self.active = False
         self.text_animation_active = False
+        # Return the index of the selected response (or -1 if none)
         return self.selected_response if self.response_options else -1
     
     def select_next_response(self):
@@ -406,5 +410,59 @@ class DialogueSystem:
     
     def complete_quest(self, quest_id):
         """Mark a quest as completed"""
-        for quest in self.active_qu
-(Content truncated due to size limit. Use line ranges to read in chunks)
+        for quest in self.active_quests:
+            if quest["id"] == quest_id and not quest["completed"]:
+                quest["completed"] = True
+                self.completed_quests.append(quest)
+                self.active_quests.remove(quest)
+                break
+    
+    def update(self):
+        """Update the dialogue system (e.g., text animation)"""
+        if not self.active:
+            return
+        current_time = pygame.time.get_ticks()
+        
+        # Animate text
+        if self.text_animation_active:
+            # You can adjust the update interval here (e.g., every 50 ms)
+            if current_time - self.last_animation_update > 50:
+                self.last_animation_update = current_time
+                self.text_animation_index += self.text_animation_speed
+                if self.text_animation_index >= len(self.current_dialogue):
+                    self.text_animation_index = len(self.current_dialogue)
+                    self.text_animation_active = False
+    
+    def draw(self, surface):
+        """Draw the dialogue box and text if active"""
+        if not self.active:
+            return
+        
+        # Draw the background box
+        pygame.draw.rect(surface, (0, 0, 0), 
+                         (self.box_x, self.box_y, self.box_width, self.box_height))
+        pygame.draw.rect(surface, (255, 255, 255), 
+                         (self.box_x, self.box_y, self.box_width, self.box_height), 2)
+        
+        # Draw the speaker name
+        speaker_surface = self.title_font.render(self.current_speaker, True, (255, 255, 255))
+        surface.blit(speaker_surface, (self.box_x + 10, self.box_y + 10))
+        
+        # Draw the portrait if available
+        if self.current_npc_type in self.portraits:
+            surface.blit(self.portraits[self.current_npc_type],
+                         (self.box_x + self.box_width - 90, self.box_y + 10))
+        
+        # Partially reveal the dialogue text (animation)
+        displayed_text = self.current_dialogue[:int(self.text_animation_index)]
+        text_surface = self.dialogue_font.render(displayed_text, True, (255, 255, 255))
+        surface.blit(text_surface, (self.box_x + 10, self.box_y + 50))
+        
+        # If there are multiple response options, show them
+        if self.response_options:
+            y_offset = 80
+            for i, option in enumerate(self.response_options):
+                color = (255, 255, 0) if i == self.selected_response else (200, 200, 200)
+                option_surface = self.dialogue_font.render(option, True, color)
+                surface.blit(option_surface, (self.box_x + 20, self.box_y + y_offset))
+                y_offset += 25
