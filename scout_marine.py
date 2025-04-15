@@ -43,21 +43,33 @@ class ScoutMarine:
         self.attack_frame = 0
         
         # Load sprite
-        self.load_sprite("walk_right.png")
+        self.load_sprite("character\walk_right.png")
         
     def load_sprite(self, filename):
         """Load the sprite image"""
         try:
-            path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", filename)
+            # Move two directories up from this file to get to 'repos'
+            repos_folder = os.path.dirname(os.path.dirname(__file__))
+
+            # Then explicitly join '40000Warriors'
+            project_root = os.path.join(repos_folder, "40000Warriors")
+
+            # Now join 'assets' + your filename
+            path = os.path.join(project_root, "assets", filename)
+
             self.sprite = pygame.image.load(path).convert_alpha()
             self.sprite = pygame.transform.scale(self.sprite, (self.width, self.height))
             self.sprite_flipped = pygame.transform.flip(self.sprite, True, False)
-        except pygame.error:
+
+        except pygame.error as e:
             print(f"Unable to load sprite: {filename}")
+            print(f"Error: {e}")
+            print(f"Attempted path: {path}")
             # Create a placeholder sprite
             self.sprite = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-            self.sprite.fill((0, 0, 255))  # Blue placeholder
+            self.sprite.fill((0, 0, 255))  
             self.sprite_flipped = pygame.transform.flip(self.sprite, True, False)
+
     
     def move(self, dx, dy):
         """Move the scout with screen boundaries"""
@@ -288,3 +300,4 @@ class ScoutMarine:
         # Reset shooting state
         if self.is_shooting and pygame.time.get_ticks() - self.last_shot_time > 100:
             self.is_shooting = False
+

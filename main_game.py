@@ -52,7 +52,7 @@ def load_image(filename):
 class Game:
     def __init__(self):
         # Load assets
-        self.hall_bg = load_image("gothic_hall.png")
+        self.hall_bg = load_image("backgrounds/gothic_hall.png")
         
         # Create player
         self.player = ScoutMarine(SCREEN_WIDTH//2, SCREEN_HEIGHT//2, SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -94,7 +94,7 @@ class Game:
         main_hall = Room("main_hall", self.hall_bg)
         
         # Create 3D interior for main hall
-        interior = Interior3D(os.path.join(ASSETS_DIR, "gothic_hall.png"), SCREEN_WIDTH, SCREEN_HEIGHT)
+        interior = Interior3D(os.path.join(ASSETS_DIR, "backgrounds/gothic_hall.png"), SCREEN_WIDTH, SCREEN_HEIGHT)
         interior.add_graffiti("The Emperor Protects", (200, 100), (255, 215, 0))
         interior.add_graffiti("Beware the Xenos", (500, 400), (255, 0, 0))
         interior.add_light_source((300, 200), (255, 200, 100), 150)
@@ -124,7 +124,7 @@ class Game:
         
         # Side chamber room
         side_chamber = Room("side_chamber")
-        side_interior = Interior3D(os.path.join(ASSETS_DIR, "gothic_hall.png"), SCREEN_WIDTH, SCREEN_HEIGHT)
+        side_interior = Interior3D(os.path.join(ASSETS_DIR, "backgrounds/gothic_hall.png"), SCREEN_WIDTH, SCREEN_HEIGHT)
         side_interior.add_graffiti("Sanctum Imperialis", (300, 200), (0, 200, 200))
         side_interior.add_light_source((400, 250), (100, 100, 255), 200)
         side_chamber.set_interior_3d(side_interior)

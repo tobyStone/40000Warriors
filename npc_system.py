@@ -1,113 +1,92 @@
 import pygame
 import os
-import math
 import random
+import math
 
 class NPC:
-    """Class for non-player characters that can interact with the player"""
-    def __init__(self, x, y, npc_type, name, dialogue_lines=None):
+    """Class for non-player characters in the game"""
+    def __init__(self, npc_type, x, y, name=None, width=40, height=60):
+        self.npc_type = npc_type
         self.x = x
         self.y = y
-        self.width = 40
-        self.height = 70
-        self.npc_type = npc_type
-        self.name = name
+        self.width = width
+        self.height = height
+        self.name = name or f"{npc_type.capitalize()} {random.randint(1, 100)}"
+        
+        # Movement properties
+        self.speed = 1
+        self.direction = "idle"
+        self.movement_pattern = "stationary"  # stationary, patrol, follow, random
+        self.patrol_points = []
+        self.current_patrol_point = 0
         
         # Appearance
         self.color = self.get_color_for_type()
         self.sprite = None
-        self.direction = "right"
+        self.load_sprite(f"{npc_type}.png")
         
         # Dialogue
-        self.dialogue_lines = dialogue_lines or self.get_default_dialogue()
-        self.current_dialogue_index = 0
-        self.interaction_range = 80
-        self.interaction_cooldown = 1000  # milliseconds
-        self.last_interaction_time = 0
-        
-        # Movement
-        self.is_moving = False
-        self.movement_pattern = "stationary"  # stationary, patrol, follow
-        self.patrol_points = []
-        self.current_patrol_point = 0
-        self.movement_speed = 1
-        self.follow_distance = 100
-        
-        # State
-        self.state = "idle"  # idle, talking, moving
-        self.animation_frame = 0
-        self.animation_speed = 0.1
-        self.last_animation_update = 0
-        self.animation_cooldown = 200  # ms
-        
-        # Quest/interaction flags
-        self.has_quest = False
-        self.quest_given = False
-        self.quest_completed = False
-        self.quest_text = ""
-        self.quest_reward = None
-        
-        # Items
-        self.items = []
+        self.dialogue = self.get_default_dialogue()
+        self.is_talking = False
     
     def get_color_for_type(self):
         """Get color based on NPC type"""
         colors = {
-            "soldier": (0, 100, 200),      # Blue for Imperial Guard
-            "tech_priest": (200, 100, 0),  # Orange for Tech Priest
-            "inquisitor": (150, 0, 150),   # Purple for Inquisitor
-            "commissar": (200, 0, 0),      # Red for Commissar
-            "civilian": (0, 150, 0),       # Green for Civilian
-            "servitor": (100, 100, 100)    # Gray for Servitor
+            "soldier": (0, 100, 0),      # Dark green
+            "tech_priest": (150, 0, 0),  # Dark red
+            "inquisitor": (100, 0, 100), # Purple
+            "commissar": (50, 50, 50),   # Dark gray
+            "civilian": (200, 150, 100), # Tan
+            "servitor": (100, 100, 150)  # Blue-gray
         }
-        return colors.get(self.npc_type.lower(), (200, 200, 200))
+        return colors.get(self.npc_type, (200, 200, 200))
     
     def get_default_dialogue(self):
         """Get default dialogue based on NPC type"""
         dialogues = {
             "soldier": [
-                "Greetings, Scout. The Emperor protects.",
-                "Beware of the Tyranid infestation ahead.",
-                "Purge the xenos with extreme prejudice.",
-                "We've lost contact with Squad Epsilon in the eastern chambers."
+                "For the Emperor!",
+                "Stand fast, brother.",
+                "The xenos must be purged.",
+                "We shall know no fear."
             ],
             "tech_priest": [
-                "The Omnissiah guides us.",
-                "Your weapons have been blessed by the Machine God.",
-                "The alien technology must be studied and destroyed.",
-                "I can upgrade your equipment if you bring me the necessary components."
+                "The Omnissiah guides my hand.",
+                "Flesh is weak. Machine is eternal.",
+                "I require more sacred oils.",
+                "01010000 01110010 01100001 01101001 01110011 01100101 00100000 01110100 01101000 01100101 00100000 01001111 01101101 01101110 01101001 01110011 01110011 01101001 01100001 01101000"
             ],
             "inquisitor": [
-                "Trust no one, not even yourself.",
-                "The xenos taint must be cleansed with fire.",
-                "I sense warp disturbances in this area.",
-                "Report any heretical activities directly to me."
+                "Heresy grows from idleness.",
+                "Innocence proves nothing.",
+                "There is no such thing as innocence, only degrees of guilt.",
+                "I am watching you, always."
             ],
             "commissar": [
-                "Failure is not an option, Scout.",
-                "Show no fear in the face of the alien.",
-                "The Emperor demands victory at any cost.",
-                "Retreat is punishable by death."
+                "Cowardice will be met with summary execution.",
+                "Fight for the Emperor or die trying.",
+                "Retreat? I think not.",
+                "Your duty is to serve the Emperor's will."
             ],
             "civilian": [
-                "Please help us! The creatures came so suddenly.",
-                "I saw them take people away... alive.",
-                "Is there any safe way out of here?",
-                "Thank the Emperor you've come!"
+                "Emperor protect us!",
+                "Please, save us from the xenos!",
+                "I've seen terrible things...",
+                "Is it safe here?"
             ],
             "servitor": [
                 "Awaiting instructions.",
-                "Systems functioning within acceptable parameters.",
-                "Maintenance protocols active.",
-                "Biological components stable."
+                "*mechanical noises*",
+                "How may this unit serve?",
+                "Processing..."
             ]
         }
-        return dialogues.get(self.npc_type.lower(), ["Hello.", "I have nothing more to say."])
+        return dialogues.get(self.npc_type, ["..."])
     
     def load_sprite(self, filename):
         """Load the sprite image"""
         try:
-            path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", filename)
+            path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "character", filename)
             self.sprite = pygame.image.load(path).convert_alpha()
             self.sprite = pygame.transform.scale(self.sprite, (self.width, self.height))
         except pygame.error:
@@ -116,231 +95,85 @@ class NPC:
             self.sprite = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
             self.sprite.fill(self.color)
     
-    def set_patrol_points(self, points):
-        """Set patrol points for the NPC to move between"""
-        self.patrol_points = points
-        self.movement_pattern = "patrol"
-    
-    def set_follow_target(self, target):
-        """Set the NPC to follow a target (usually the player)"""
-        self.follow_target = target
-        self.movement_pattern = "follow"
-    
-    def set_quest(self, quest_text, reward=None):
-        """Set a quest for this NPC to give to the player"""
-        self.has_quest = True
-        self.quest_text = quest_text
-        self.quest_reward = reward
-    
-    def complete_quest(self):
-        """Mark the NPC's quest as completed"""
-        if self.has_quest and not self.quest_completed:
-            self.quest_completed = True
-            return self.quest_reward
-        return None
-    
-    def add_item(self, item):
-        """Add an item to the NPC's inventory"""
-        self.items.append(item)
-    
-    def give_item(self, item_name):
-        """Give an item to the player"""
-        for item in self.items[:]:
-            if item["name"] == item_name:
-                self.items.remove(item)
-                return item
-        return None
-    
-    def can_interact(self, player_x, player_y):
-        """Check if player is in range to interact"""
-        # Check if player is in range
-        dx = player_x - self.x
-        dy = player_y - self.y
-        distance = math.sqrt(dx*dx + dy*dy)
-        
-        current_time = pygame.time.get_ticks()
-        cooldown_passed = current_time - self.last_interaction_time > self.interaction_cooldown
-        
-        return distance < self.interaction_range and cooldown_passed
-    
-    def interact(self):
-        """Interact with the NPC and get dialogue"""
-        self.last_interaction_time = pygame.time.get_ticks()
-        self.state = "talking"
-        
-        # If NPC has a quest and it hasn't been given yet
-        if self.has_quest and not self.quest_given:
-            self.quest_given = True
-            return {
-                "type": "quest",
-                "text": self.quest_text,
-                "speaker": self.name,
-                "npc_type": self.npc_type
-            }
-        
-        # Regular dialogue
-        dialogue = self.dialogue_lines[self.current_dialogue_index]
-        self.current_dialogue_index = (self.current_dialogue_index + 1) % len(self.dialogue_lines)
-        
-        return {
-            "type": "dialogue",
-            "text": dialogue,
-            "speaker": self.name,
-            "npc_type": self.npc_type
-        }
-    
-    def update_movement(self):
-        """Update NPC movement based on movement pattern"""
+    def update(self, player_x=None, player_y=None):
+        """Update NPC position and state"""
         if self.movement_pattern == "stationary":
             return
         
-        elif self.movement_pattern == "patrol" and self.patrol_points:
-            # Move towards current patrol point
+        if self.movement_pattern == "patrol" and self.patrol_points:
             target_x, target_y = self.patrol_points[self.current_patrol_point]
+            
+            # Move towards patrol point
             dx = target_x - self.x
             dy = target_y - self.y
-            distance = max(1, math.sqrt(dx*dx + dy*dy))
+            dist = math.sqrt(dx*dx + dy*dy)
             
-            # If close enough to current point, move to next point
-            if distance < 10:
+            if dist < 5:  # Close enough to target
                 self.current_patrol_point = (self.current_patrol_point + 1) % len(self.patrol_points)
-                return
-            
-            # Move towards point
-            self.x += (dx / distance) * self.movement_speed
-            self.y += (dy / distance) * self.movement_speed
-            
-            # Update direction
-            if dx > 0:
-                self.direction = "right"
-            elif dx < 0:
-                self.direction = "left"
-            
-            self.is_moving = True
-            self.state = "moving"
-        
-        elif self.movement_pattern == "follow" and hasattr(self, 'follow_target'):
-            # Get target position
-            target_x = self.follow_target.x
-            target_y = self.follow_target.y
-            
-            # Calculate distance
-            dx = target_x - self.x
-            dy = target_y - self.y
-            distance = math.sqrt(dx*dx + dy*dy)
-            
-            # Only follow if beyond follow distance
-            if distance > self.follow_distance:
-                # Move towards target
-                self.x += (dx / distance) * self.movement_speed
-                self.y += (dy / distance) * self.movement_speed
-                
-                # Update direction
-                if dx > 0:
-                    self.direction = "right"
-                elif dx < 0:
-                    self.direction = "left"
-                
-                self.is_moving = True
-                self.state = "moving"
             else:
-                self.is_moving = False
-                self.state = "idle"
-    
-    def update_animation(self):
-        """Update animation frames"""
-        if self.is_moving:
-            current_time = pygame.time.get_ticks()
-            if current_time - self.last_animation_update > self.animation_cooldown:
-                self.last_animation_update = current_time
-                self.animation_frame = (self.animation_frame + 1) % 4  # Assuming 4 frames
-    
-    def update(self):
-        """Update NPC state"""
-        self.update_movement()
-        self.update_animation()
+                # Move towards target
+                self.x += (dx / dist) * self.speed
+                self.y += (dy / dist) * self.speed
         
-        # Reset talking state after a delay
-        if self.state == "talking" and pygame.time.get_ticks() - self.last_interaction_time > 1000:
-            self.state = "idle"
+        elif self.movement_pattern == "follow" and player_x is not None and player_y is not None:
+            # Move towards player but keep distance
+            dx = player_x - self.x
+            dy = player_y - self.y
+            dist = math.sqrt(dx*dx + dy*dy)
+            
+            if dist > 100:  # Only follow if player is far enough
+                self.x += (dx / dist) * self.speed
+                self.y += (dy / dist) * self.speed
+        
+        elif self.movement_pattern == "random":
+            # Random movement
+            if random.random() < 0.02:  # 2% chance to change direction
+                self.direction = random.choice(["up", "down", "left", "right", "idle"])
+            
+            if self.direction == "up":
+                self.y -= self.speed
+            elif self.direction == "down":
+                self.y += self.speed
+            elif self.direction == "left":
+                self.x -= self.speed
+            elif self.direction == "right":
+                self.x += self.speed
     
-    def draw(self, surface):
-        """Draw the NPC"""
+    def draw(self, screen):
+        """Draw the NPC on the screen"""
         if self.sprite:
-            # Draw sprite with direction
-            sprite_to_draw = self.sprite
-            if self.direction == "left":
-                sprite_to_draw = pygame.transform.flip(self.sprite, True, False)
-            surface.blit(sprite_to_draw, (self.x, self.y))
+            screen.blit(self.sprite, (self.x - self.width//2, self.y - self.height//2))
         else:
             # Draw placeholder rectangle
-            pygame.draw.rect(surface, self.color, (self.x, self.y, self.width, self.height))
-        
-        # Draw interaction indicator if in talking state
-        if self.state == "talking":
-            pygame.draw.circle(surface, (255, 255, 255), 
-                              (int(self.x + self.width/2), int(self.y - 10)), 
-                              5)
-        
-        # Draw quest indicator if NPC has a quest
-        if self.has_quest and not self.quest_completed:
-            # Yellow exclamation mark
-            pygame.draw.rect(surface, (255, 255, 0), 
-                             (self.x + self.width/2 - 2, self.y - 25, 4, 15))
-            pygame.draw.circle(surface, (255, 255, 0), 
-                               (int(self.x + self.width/2), int(self.y - 30)), 
-                               4)
-        
-        # Draw quest completed indicator
-        if self.quest_completed:
-            # Green check mark
-            pygame.draw.line(surface, (0, 255, 0), 
-                             (self.x + self.width/2 - 5, self.y - 20),
-                             (self.x + self.width/2, self.y - 15), 3)
-            pygame.draw.line(surface, (0, 255, 0), 
-                             (self.x + self.width/2, self.y - 15),
-                             (self.x + self.width/2 + 8, self.y - 25), 3)
-
+            pygame.draw.rect(screen, self.color, 
+                            (self.x - self.width//2, self.y - self.height//2, 
+                             self.width, self.height))
+    
+    def get_dialogue(self):
+        """Get a random dialogue line"""
+        return random.choice(self.dialogue)
+    
+    def set_dialogue(self, dialogue_list):
+        """Set custom dialogue for this NPC"""
+        self.dialogue = dialogue_list
+    
+    def interact(self):
+        """Interact with this NPC"""
+        self.is_talking = True
+        return self.get_dialogue()
+    
+    def end_interaction(self):
+        """End interaction with this NPC"""
+        self.is_talking = False
 
 class DialogueSystem:
-    """System to manage NPC dialogues and interactions"""
+    """System for handling NPC dialogues"""
     def __init__(self, screen_width, screen_height):
         self.screen_width = screen_width
         self.screen_height = screen_height
-        
-        # Fonts
-        pygame.font.init()
-        self.title_font = pygame.font.SysFont('Arial', 24)
-        self.dialogue_font = pygame.font.SysFont('Arial', 20)
-        
-        # Active dialogue
         self.active = False
-        self.current_dialogue = ""
-        self.current_speaker = ""
-        self.current_npc_type = ""
-        self.dialogue_type = "dialogue"  # dialogue, quest, item
-        
-        # Dialogue box properties
-        self.box_width = screen_width - 100
-        self.box_height = 150
-        self.box_x = 50
-        self.box_y = screen_height - 200
-        
-        # Text animation
-        self.text_animation_index = 0
-        self.text_animation_speed = 2  # characters per update tick
-        self.text_animation_active = False
-        self.last_animation_update = 0
-        
-        # Response options
-        self.response_options = []
-        self.selected_response = 0
-        
-        # Quest tracking
-        self.active_quests = []
-        self.completed_quests = []
-        
-        # Portrait images for different NPC types
+        self.current_npc = None
+        self.current_text = ""
         self.portraits = {}
         self.load_portraits()
     
@@ -352,6 +185,7 @@ class DialogueSystem:
                 portrait_path = os.path.join(
                     os.path.dirname(os.path.dirname(__file__)), 
                     "assets", 
+                    "character",
                     f"{npc_type}_portrait.png"
                 )
                 if os.path.exists(portrait_path):
@@ -364,105 +198,79 @@ class DialogueSystem:
                 portrait.fill((100, 100, 100))
                 self.portraits[npc_type] = portrait
     
-    def start_dialogue(self, dialogue_data):
-        """Start a dialogue interaction"""
+    def start_dialogue(self, npc):
+        """Start dialogue with an NPC"""
         self.active = True
-        self.current_dialogue = dialogue_data["text"]
-        self.current_speaker = dialogue_data["speaker"]
-        self.current_npc_type = dialogue_data.get("npc_type", "")
-        self.dialogue_type = dialogue_data.get("type", "dialogue")
-        
-        # Start text animation
-        self.text_animation_index = 0
-        self.text_animation_active = True
-        self.last_animation_update = pygame.time.get_ticks()
-        
-        # Set response options if provided
-        self.response_options = dialogue_data.get("responses", [])
-        self.selected_response = 0
-        
-        # Add quest to active quests if this is a quest dialogue
-        if self.dialogue_type == "quest" and "quest_id" in dialogue_data:
-            self.active_quests.append({
-                "id": dialogue_data["quest_id"],
-                "title": dialogue_data.get("quest_title", "New Quest"),
-                "description": dialogue_data["text"],
-                "giver": dialogue_data["speaker"],
-                "completed": False
-            })
+        self.current_npc = npc
+        self.current_text = npc.interact()
     
     def end_dialogue(self):
         """End the current dialogue"""
+        if self.current_npc:
+            self.current_npc.end_interaction()
         self.active = False
-        self.text_animation_active = False
-        # Return the index of the selected response (or -1 if none)
-        return self.selected_response if self.response_options else -1
+        self.current_npc = None
+        self.current_text = ""
     
-    def select_next_response(self):
-        """Select the next response option"""
-        if self.response_options:
-            self.selected_response = (self.selected_response + 1) % len(self.response_options)
-    
-    def select_prev_response(self):
-        """Select the previous response option"""
-        if self.response_options:
-            self.selected_response = (self.selected_response - 1) % len(self.response_options)
-    
-    def complete_quest(self, quest_id):
-        """Mark a quest as completed"""
-        for quest in self.active_quests:
-            if quest["id"] == quest_id and not quest["completed"]:
-                quest["completed"] = True
-                self.completed_quests.append(quest)
-                self.active_quests.remove(quest)
-                break
-    
-    def update(self):
-        """Update the dialogue system (e.g., text animation)"""
-        if not self.active:
-            return
-        current_time = pygame.time.get_ticks()
-        
-        # Animate text
-        if self.text_animation_active:
-            # You can adjust the update interval here (e.g., every 50 ms)
-            if current_time - self.last_animation_update > 50:
-                self.last_animation_update = current_time
-                self.text_animation_index += self.text_animation_speed
-                if self.text_animation_index >= len(self.current_dialogue):
-                    self.text_animation_index = len(self.current_dialogue)
-                    self.text_animation_active = False
-    
-    def draw(self, surface):
-        """Draw the dialogue box and text if active"""
-        if not self.active:
+    def draw(self, screen):
+        """Draw the dialogue UI"""
+        if not self.active or not self.current_npc:
             return
         
-        # Draw the background box
-        pygame.draw.rect(surface, (0, 0, 0), 
-                         (self.box_x, self.box_y, self.box_width, self.box_height))
-        pygame.draw.rect(surface, (255, 255, 255), 
-                         (self.box_x, self.box_y, self.box_width, self.box_height), 2)
+        # Draw dialogue box
+        box_height = 150
+        box_y = self.screen_height - box_height - 10
+        pygame.draw.rect(screen, (50, 50, 50), 
+                         (10, box_y, self.screen_width - 20, box_height))
+        pygame.draw.rect(screen, (200, 200, 200), 
+                         (10, box_y, self.screen_width - 20, box_height), 2)
         
-        # Draw the speaker name
-        speaker_surface = self.title_font.render(self.current_speaker, True, (255, 255, 255))
-        surface.blit(speaker_surface, (self.box_x + 10, self.box_y + 10))
+        # Draw portrait
+        portrait = self.portraits.get(self.current_npc.npc_type)
+        if portrait:
+            screen.blit(portrait, (20, box_y + 10))
         
-        # Draw the portrait if available
-        if self.current_npc_type in self.portraits:
-            surface.blit(self.portraits[self.current_npc_type],
-                         (self.box_x + self.box_width - 90, self.box_y + 10))
+        # Draw name
+        font = pygame.font.SysFont('Arial', 24)
+        name_text = font.render(self.current_npc.name, True, (255, 215, 0))
+        screen.blit(name_text, (110, box_y + 15))
         
-        # Partially reveal the dialogue text (animation)
-        displayed_text = self.current_dialogue[:int(self.text_animation_index)]
-        text_surface = self.dialogue_font.render(displayed_text, True, (255, 255, 255))
-        surface.blit(text_surface, (self.box_x + 10, self.box_y + 50))
+        # Draw dialogue text
+        dialogue_font = pygame.font.SysFont('Arial', 18)
+        lines = self.wrap_text(self.current_text, dialogue_font, self.screen_width - 150)
+        for i, line in enumerate(lines):
+            text_surface = dialogue_font.render(line, True, (255, 255, 255))
+            screen.blit(text_surface, (110, box_y + 50 + i * 25))
         
-        # If there are multiple response options, show them
-        if self.response_options:
-            y_offset = 80
-            for i, option in enumerate(self.response_options):
-                color = (255, 255, 0) if i == self.selected_response else (200, 200, 200)
-                option_surface = self.dialogue_font.render(option, True, color)
-                surface.blit(option_surface, (self.box_x + 20, self.box_y + y_offset))
-                y_offset += 25
+        # Draw continue prompt
+        prompt_text = dialogue_font.render("Press E to continue", True, (200, 200, 200))
+        screen.blit(prompt_text, (self.screen_width - 150, box_y + box_height - 30))
+    
+    def wrap_text(self, text, font, max_width):
+        """Wrap text to fit within a certain width"""
+        words = text.split(' ')
+        lines = []
+        current_line = []
+        
+        for word in words:
+            # Test width with current word added
+            test_line = ' '.join(current_line + [word])
+            test_width = font.size(test_line)[0]
+            
+            if test_width <= max_width:
+                current_line.append(word)
+            else:
+                # Line is full, start a new line
+                lines.append(' '.join(current_line))
+                current_line = [word]
+        
+        # Add the last line
+        if current_line:
+            lines.append(' '.join(current_line))
+        
+        return lines
+
+def create_npc(npc_type, x, y, name=None):
+    """Create and return an NPC of the specified type"""
+    return NPC(npc_type, x, y, name)
+
