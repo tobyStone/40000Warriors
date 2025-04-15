@@ -2,6 +2,7 @@ import pygame
 import os
 import random
 import math
+import sys
 
 class NPC:
     """Class for non-player characters in the game"""
@@ -86,14 +87,27 @@ class NPC:
     def load_sprite(self, filename):
         """Load the sprite image"""
         try:
-            path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "character", filename)
+            # Construct the full path to the 40000Warriors folder
+            project_root = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "40000Warriors")
+            )
+            # Point to your 'assets/character' directory
+            assets_path = os.path.join(project_root, "assets", "character")
+        
+            # Construct the full path to the desired sprite file
+            path = os.path.join(assets_path, filename)
+        
+            # Now load the sprite
             self.sprite = pygame.image.load(path).convert_alpha()
             self.sprite = pygame.transform.scale(self.sprite, (self.width, self.height))
+        
         except pygame.error:
             print(f"Unable to load NPC sprite: {filename}")
+            print(f"Attempted path: {path}")
             # Create a placeholder sprite
             self.sprite = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
             self.sprite.fill(self.color)
+
     
     def update(self, player_x=None, player_y=None):
         """Update NPC position and state"""

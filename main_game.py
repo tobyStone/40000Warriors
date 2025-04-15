@@ -5,7 +5,11 @@ import math
 import random
 
 # Import game modules
-sys.path.append(os.path.join(os.path.dirname(__file__), "assets"))
+# One approach is to manually traverse to the proper repo root
+project_root = os.path.join(os.path.dirname(__file__), "..", "40000Warriors")
+assets_path = os.path.join(project_root, "assets")
+sys.path.append(assets_path)
+
 from tyranid_sprites import create_tyranid
 from interior_3d import Interior3D
 from scout_marine import ScoutMarine
@@ -138,7 +142,7 @@ class Game:
         
         # Armory room
         armory = Room("armory")
-        armory_interior = Interior3D(os.path.join(ASSETS_DIR, "gothic_hall.png"), SCREEN_WIDTH, SCREEN_HEIGHT)
+        armory_interior = Interior3D(os.path.join(ASSETS_DIR, "backgrounds/gothic_hall.png"), SCREEN_WIDTH, SCREEN_HEIGHT)
         armory_interior.add_graffiti("Imperial Armory", (300, 200), (200, 200, 200))
         armory_interior.add_light_source((400, 300), (255, 150, 50), 180)
         armory.set_interior_3d(armory_interior)
@@ -352,17 +356,17 @@ class Game:
         if self.game_over or self.game_paused:
             return
         
-        # Update player
-        self.player.update()
+        ## Update player
+        #self.player.update()
         
-        # Update room manager
-        self.room_manager.update()
+        ## Update room manager
+        #self.room_manager.update()
         
-        # Update UI
-        self.ui.update()
+        ## Update UI
+        #self.ui.update()
         
-        # Update dialogue
-        self.dialogue.update()
+        ## Update dialogue
+        #self.dialogue.update()
         
         # Spawn enemies
         self.spawn_enemy()
