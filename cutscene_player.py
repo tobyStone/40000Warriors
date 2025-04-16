@@ -42,11 +42,6 @@ def play_intro_cutscene(video_path):
 
     video.release()
 
-# Example usage
-if __name__ == "__main__":
-    play_intro_cutscene("assets/cutscenes/intro.mp4")
-
-    # After cutscene, start your main game here:
-    # import main_game
-    # main_game.run()
+# Expose play_intro_cutscene if you want to import them from elsewhere
+__all__ = ["play_intro_cutscene"]
 

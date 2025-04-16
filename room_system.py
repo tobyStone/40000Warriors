@@ -46,7 +46,6 @@ class RoomTransition:
     def load_sprite(self, filename):
         """Load the sprite image from the assets folder"""
         try:
-            # Assume assets are located at .../40000Warriors/assets/
             project_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "40000Warriors")
             assets_path = os.path.join(project_root, "assets")
             path = os.path.join(assets_path, filename)
@@ -99,7 +98,7 @@ class RoomTransition:
         current_time = pygame.time.get_ticks()
         if current_time - self.last_animation_update > self.animation_cooldown:
             self.last_animation_update = current_time
-            self.animation_frame = (self.animation_frame + 1) % 4  # Assuming 4 frames for animation
+            self.animation_frame = (self.animation_frame + 1) % 4
             self.glow_pulse += 0.1 * self.glow_direction
             if self.glow_pulse > 1:
                 self.glow_pulse = 1
@@ -109,12 +108,11 @@ class RoomTransition:
                 self.glow_direction = 1
     
     def update(self):
-        """Update the transition's state (animations, etc.)"""
+        """Update the transition state"""
         self.update_animation()
     
     def draw(self, surface):
-        """Draw the transition with visual effects and sprite/placeholder"""
-        # Draw glow effect if enabled
+        """Draw the transition with its visual effects and sprite/placeholder"""
         if self.glow_effect:
             glow_size = self.glow_radius * 2
             glow_surf = pygame.Surface((glow_size, glow_size), pygame.SRCALPHA)
@@ -129,13 +127,11 @@ class RoomTransition:
             glow_y = self.y + self.height // 2 - self.glow_radius
             surface.blit(glow_surf, (glow_x, glow_y))
         
-        # Draw the sprite if available, otherwise draw a rectangle
         if self.sprite:
             surface.blit(self.sprite, (self.x, self.y))
         else:
             pygame.draw.rect(surface, self.color, (self.x, self.y, self.width, self.height))
         
-        # Draw lock indicator if locked
         if self.is_locked:
             lock_color = (255, 0, 0)
             lock_x = self.x + self.width // 2 - 5
@@ -157,14 +153,13 @@ class RoomManager:
         self.is_transitioning = False
         self.next_room_id = None
         
-        # Pre-generate transition effect surfaces for effects like fade, wipe, and portal
         self.transition_surfaces = {}
         self.generate_transition_effects()
     
     def generate_transition_effects(self):
-        """Generate surfaces for different transition effects"""
+        """Generate transition effect surfaces"""
         fade_surf = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
-        fade_surf.fill((0, 0, 0, 0))  # Start fully transparent
+        fade_surf.fill((0, 0, 0, 0))
         self.transition_surfaces["fade"] = fade_surf
         
         wipe_surf = pygame.Surface((self.screen_width, self.screen_height), pygame.SRCALPHA)
@@ -180,17 +175,14 @@ class RoomManager:
         self.transition_surfaces["portal"] = portal_surf
     
     def add_room(self, room_id, room):
-        """Add a room to the manager and set it as the current room if none exists"""
         self.rooms[room_id] = room
         if self.current_room_id is None:
             self.current_room_id = room_id
     
     def get_current_room(self):
-        """Retrieve the current active room"""
         return self.rooms.get(self.current_room_id)
     
     def transition_to_room(self, room_id, effect="fade"):
-        """Begin a transition to a new room using a specified effect"""
         if room_id not in self.rooms or self.is_transitioning:
             return False
         self.is_transitioning = True
@@ -200,7 +192,6 @@ class RoomManager:
         return True
     
     def update_transition(self):
-        """Update the state of the room transition effect"""
         if not self.is_transitioning:
             return
         self.transition_progress += self.transition_speed
@@ -211,21 +202,21 @@ class RoomManager:
             self.transition_progress = 0
     
     def update(self):
-        """Update the room manager and current room state"""
         self.update_transition()
         current_room = self.get_current_room()
         if current_room:
             current_room.update()
     
     def draw(self, surface):
-        """Draw the current room and any active transition effects"""
         current_room = self.get_current_room()
         if current_room:
             current_room.draw(surface)
         
         if self.is_transitioning:
             if self.transition_effect == "fade":
-                alpha = int(255 * self.transition_progress) if self.transition_progress < 0.5 else int(255 * (1 - self.transition_progress) * 2)
+                alpha = (int(255 * self.transition_progress)
+                         if self.transition_progress < 0.5
+                         else int(255 * (1 - self.transition_progress) * 2))
                 fade_surf = self.transition_surfaces["fade"].copy()
                 fade_surf.fill((0, 0, 0, alpha))
                 surface.blit(fade_surf, (0, 0))
@@ -245,13 +236,12 @@ class RoomManager:
                     y = (self.screen_height - scaled_portal.get_height()) // 2
                     surface.blit(scaled_portal, (x, y))
 
-
 class Room:
     """Class representing a game room with background, entities, and transitions"""
     def __init__(self, room_id, background_image=None):
         self.room_id = room_id
         self.background = background_image
-        self.interior_3d = None  # Optional 3D interior effect
+        self.interior_3d = None
         self.enemies = []
         self.npcs = []
         self.transitions = []
@@ -260,19 +250,16 @@ class Room:
         self.decorations = []
         self.light_sources = []
         
-        # Additional room properties
         self.ambient_light = 0.7
         self.fog_enabled = False
         self.fog_color = (200, 200, 220, 30)
         self.fog_density = 0.3
         
-        # Room state flags
         self.is_cleared = False
         self.is_visited = False
         self.special_events = []
     
     def set_interior_3d(self, interior_3d):
-        """Set a 3D interior effect for the room"""
         self.interior_3d = interior_3d
     
     def add_enemy(self, enemy):
@@ -326,7 +313,7 @@ class Room:
         return None
     
     def update(self):
-        """Update the state of the room, its entities, and transitions"""
+        """Update room state including interior, decorations, and entities"""
         if self.interior_3d:
             self.interior_3d.update()
         for transition in self.transitions:
@@ -339,8 +326,7 @@ class Room:
             self.is_cleared = True
     
     def draw(self, surface):
-        """Draw the room, its contents, and transitions"""
-        # Draw background or 3D interior if available
+        """Draw the room including background, entities, decorations, and transitions"""
         if self.interior_3d:
             self.interior_3d.draw(surface)
         elif self.background:
@@ -349,7 +335,6 @@ class Room:
         else:
             surface.fill((50, 50, 50))
         
-        # Draw decorations
         for decor in self.decorations:
             if decor["image"]:
                 surface.blit(decor["image"], (decor["x"], decor["y"]))
@@ -357,25 +342,20 @@ class Room:
                 pygame.draw.rect(surface, decor["color"],
                                  (decor["x"], decor["y"], decor["width"], decor["height"]))
         
-        # Draw items
         for item in self.items:
             item.draw(surface)
         
-        # Draw NPCs
         for npc in self.npcs:
             npc.draw(surface)
         
-        # Draw enemies
         for enemy in self.enemies:
             enemy.draw(surface)
         
-        # Draw transitions
         for transition in self.transitions:
             transition.draw(surface)
 
 def create_transition(transition_type, x, y, width, height, target_room):
-    """Factory function to create a RoomTransition object"""
     return RoomTransition(x, y, width, height, target_room, transition_type)
 
-# Explicitly expose the API for importers
+# Expose the API for external imports
 __all__ = ['Room', 'RoomManager', 'RoomTransition', 'create_transition']

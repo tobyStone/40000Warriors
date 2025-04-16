@@ -27,6 +27,16 @@ class UISystem:
         self.player_armor_bar = HealthBar(20, 50, 200, 15, "ARMOR", self.armor_color)
         self.enemy_health_bar = HealthBar(self.screen_width - 220, 20, 200, 20, "ENEMY", self.enemy_health_color, self.enemy_health_bg_color)
         
+        # Fullscreen button
+        self.fullscreen_button = Button(
+            self.screen_width - 100,
+            10,
+            90,
+            30,
+            "Fullscreen",
+            self.toggle_fullscreen
+        )
+        
         # Game messages
         self.messages = []
         self.message_duration = 3000  # milliseconds
@@ -48,11 +58,25 @@ class UISystem:
         self.kill_counter = Counter(self.screen_width - 150, 80, "KILLS", 0)
         
         # Game timer
-        self.game_timer = GameTimer(self.screen_width // 2 - 50, 20)
+        self.game_timer = GameTimer(20, 80)
         
         # Objective tracker
-        self.objective_tracker = ObjectiveTracker(20, 100)
+        self.objective_tracker = ObjectiveTracker(20, self.screen_height - 100)
         
+        # Fullscreen state
+        self.is_fullscreen = False
+        
+    def toggle_fullscreen(self):
+        """Toggle fullscreen mode"""
+        self.is_fullscreen = not self.is_fullscreen
+        pygame.display.toggle_fullscreen()
+
+    def handle_events(self, event):
+        """Handle UI-related events"""
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.fullscreen_button.is_clicked(event.pos):
+                self.fullscreen_button.on_click()
+
     def update_player_health(self, current_health, max_health):
         """Update the player health bar"""
         self.player_health_bar.update(current_health, max_health)
@@ -120,19 +144,17 @@ class UISystem:
         # Draw health bars
         self.player_health_bar.draw(surface)
         self.player_armor_bar.draw(surface)
+        self.enemy_health_bar.draw(surface)
         
-        # Draw enemy health bar if active
-        if self.enemy_health_bar.current > 0:
-            self.enemy_health_bar.draw(surface)
+        # Draw fullscreen button
+        self.fullscreen_button.draw(surface)
         
         # Draw messages
-        message_y = self.screen_height - 150
-        for msg in self.messages:
-            text_surface = self.normal_font.render(msg["text"], True, msg["color"])
-            surface.blit(text_surface, (self.screen_width // 2 - text_surface.get_width() // 2, message_y))
-            message_y -= 30
+        for i, msg in enumerate(self.messages):
+            text_surface = self.normal_font.render(msg['text'], True, msg['color'])
+            surface.blit(text_surface, (20, self.screen_height - 100 - i * 30))
         
-        # Draw dialogue box
+        # Draw dialogue if active
         if self.dialogue_active:
             self.draw_dialogue_box(surface)
         
@@ -424,3 +446,26 @@ class ObjectiveTracker:
             surface.blit(text_surface, (self.x + 20, y_offset))
             
             y_offset += 25
+
+
+class Button:
+    def __init__(self, x, y, width, height, text, on_click):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.text = text
+        self.on_click = on_click
+        self.font = pygame.font.SysFont('Arial', 16)
+        self.is_hovered = False
+    
+    def is_clicked(self, pos):
+        return self.rect.collidepoint(pos)
+    
+    def draw(self, surface):
+        # Draw button background
+        color = (100, 100, 100) if self.is_hovered else (50, 50, 50)
+        pygame.draw.rect(surface, color, self.rect)
+        pygame.draw.rect(surface, (255, 255, 255), self.rect, 2)
+        
+        # Draw button text
+        text_surface = self.font.render(self.text, True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=self.rect.center)
+        surface.blit(text_surface, text_rect)
