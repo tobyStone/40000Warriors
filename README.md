@@ -112,6 +112,8 @@ scout_marine.py – Player character class
 tyranid_sprites.py – Enemy base class & subclasses
 
 ui_system.py – On‑screen HUD, messages, objectives
+
+
 ⚙️ Customization & Tips
 
 Sprite Scale: Tweak TYRANID_SCALE at the top of tyranid_sprites.py to uniformly resize all enemies.
