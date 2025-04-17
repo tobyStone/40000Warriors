@@ -79,8 +79,39 @@ ESC to quit
 
 🗂️ Project Structure
 
-<pre> ```text 📁 40000Warriors ├── assets/ │ ├── backgrounds/ # Room backgrounds │ ├── character/ # Sprite art for player, NPCs, Tyranids │ └── cut_scenes/ # Intro video(s) ├── boss_system.py # Boss AI & spawning ├── cutscene_player.py # Cutscene playback helper ├── game_launcher.py # Entry point (launch GUI/CLI) ├── generate_sprites.py # (Optional) sprite‑sheet generator ├── interior_3d.py # 3D room rendering utilities ├── main_game.py # Main game loop & orchestrator ├── npc_system.py # NPC creation & dialogue system ├── pickup_system.py # Health & ammo pickup logic ├── room_system.py # Room definitions & transitions ├── scout_marine.py # Player character class ├── tyranid_sprites.py # Enemy base class & subclasses └── ui_system.py # On‑screen HUD, messages, objectives ``` </pre>
+40000Warriors/
 
+assets/
+
+backgrounds/ – Room backgrounds
+
+character/ – Sprite art for player, NPCs, Tyranids
+
+cut_scenes/ – Intro video(s)
+
+boss_system.py – Boss AI & spawning
+
+cutscene_player.py – Cutscene playback helper
+
+game_launcher.py – Entry point (launch GUI/CLI)
+
+generate_sprites.py – (Optional) sprite‑sheet generator
+
+interior_3d.py – 3D room rendering utilities
+
+main_game.py – Main game loop & orchestrator
+
+npc_system.py – NPC creation & dialogue system
+
+pickup_system.py – Health & ammo pickup logic
+
+room_system.py – Room definitions & transitions
+
+scout_marine.py – Player character class
+
+tyranid_sprites.py – Enemy base class & subclasses
+
+ui_system.py – On‑screen HUD, messages, objectives
 ⚙️ Customization & Tips
 
 Sprite Scale: Tweak TYRANID_SCALE at the top of tyranid_sprites.py to uniformly resize all enemies.
