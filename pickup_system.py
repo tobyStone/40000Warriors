@@ -1,6 +1,7 @@
 import pygame
 import random
 import math
+import os
 
 class Pickup:
     """Base class for all pickups"""
@@ -128,13 +129,44 @@ class Pickup:
         self.active = False
         return True
 
+    def load_pickup_sprite(self, sprite_name):
+        """Load a sprite for the pickup"""
+        try:
+            # Get the project root directory
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.dirname(current_dir)
+            
+            # Construct the path to the sprite
+            path = os.path.join(project_root, "40000Warriors", "assets", sprite_name)
+            
+            # Load and return the sprite
+            return pygame.image.load(path).convert_alpha()
+        except pygame.error as e:
+            print(f"Unable to load pickup sprite: {sprite_name}")
+            print(f"Error: {e}")
+            print(f"Attempted path: {path}")
+            # Return a colored placeholder surface
+            surface = pygame.Surface((32, 32), pygame.SRCALPHA)
+            surface.fill((255, 215, 0))  # Gold for missing pickup textures
+            pygame.draw.rect(surface, (0, 0, 0), surface.get_rect(), 2)  # Black border
+            return surface
+
 class AmmoCrate(Pickup):
     """Specialized ammo pickup"""
-    def __init__(self, x, y):
+    def __init__(self, x, y, ammo_type=None, ammo_amount=None):
         super().__init__(x, y, 40, 40, "ammo")
-        self.ammo_amount = random.randint(50, 100)
-        self.ammo_types = ["bolter", "plasma", "melta"]
-        self.ammo_type = random.choice(self.ammo_types)
+        
+        # If no specific type/amount provided, randomize them
+        if ammo_type is None:
+            self.ammo_types = ["bolter", "plasma", "melta"]
+            self.ammo_type = random.choice(self.ammo_types)
+        else:
+            self.ammo_type = ammo_type
+            
+        if ammo_amount is None:
+            self.ammo_amount = random.randint(50, 100)
+        else:
+            self.ammo_amount = ammo_amount
         
         # Update color based on ammo type
         ammo_colors = {
@@ -144,21 +176,27 @@ class AmmoCrate(Pickup):
         }
         self.color = ammo_colors.get(self.ammo_type, (255, 200, 0))
         self.glow_color = (*self.color, 128)
-    
+        
     def collect(self, player):
-        """Handle ammo crate collection"""
-        if not super().collect(player):
-            return False
-        
-        # Add ammo to player's weapons
-        if self.ammo_type == "bolter":
-            player.bolter_ammo += self.ammo_amount
-        elif self.ammo_type == "plasma":
-            player.plasma_ammo += self.ammo_amount
-        elif self.ammo_type == "melta":
-            player.melta_ammo += self.ammo_amount
-        
-        return True
+        """Add ammo to the player's inventory based on ammo type"""
+        if not self.collected:
+            ammo_added = 0
+            if self.ammo_type == "bolter":
+                space_left = player.max_bolter_ammo - player.bolter_ammo
+                ammo_added = min(space_left, self.ammo_amount)
+                player.bolter_ammo += ammo_added
+            elif self.ammo_type == "plasma":
+                space_left = player.max_plasma_ammo - player.plasma_ammo
+                ammo_added = min(space_left, self.ammo_amount)
+                player.plasma_ammo += ammo_added
+            elif self.ammo_type == "melta":
+                space_left = player.max_melta_ammo - player.melta_ammo
+                ammo_added = min(space_left, self.ammo_amount)
+                player.melta_ammo += ammo_added
+                
+            self.collected = True
+            return ammo_added > 0  # Return True if any ammo was actually added
+        return False
     
     def draw_pickup_shape(self, surface):
         """Draw ammo crate specific shape"""

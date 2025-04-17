@@ -120,27 +120,46 @@ class NPC:
     def load_sprite(self, filename):
         """Load the sprite image"""
         try:
-            # Construct the full path to the 40000Warriors folder
-            project_root = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", "40000Warriors")
-            )
-            # Point to your 'assets/character' directory
-            assets_path = os.path.join(project_root, "assets", "character")
+            # Get the project root directory
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.dirname(current_dir)
         
-            # Construct the full path to the desired sprite file
-            path = os.path.join(assets_path, filename)
+            # Construct the path to the sprite with 'character' directory
+            path = os.path.join(project_root,"40000Warriors", "assets", "character", filename)
         
-            # Now load the sprite
             self.sprite = pygame.image.load(path).convert_alpha()
             self.sprite = pygame.transform.scale(self.sprite, (self.width, self.height))
-        
-        except pygame.error:
+            self.sprite_flipped = pygame.transform.flip(self.sprite, True, False)
+
+        except pygame.error as e:
             print(f"Unable to load NPC sprite: {filename}")
+            print(f"Error: {e}")
             print(f"Attempted path: {path}")
             # Create a placeholder sprite
             self.sprite = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
             self.sprite.fill(self.color)
 
+    def load_npc_sprite(self, sprite_name):
+        """Load a sprite for the NPC"""
+        try:
+            # Get the project root directory
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.dirname(current_dir)
+            
+            # Construct the path to the sprite
+            path = os.path.join(project_root, "40000Warriors", "assets", sprite_name)
+            
+            # Load and return the sprite
+            return pygame.image.load(path).convert_alpha()
+        except pygame.error as e:
+            print(f"Unable to load NPC sprite: {sprite_name}")
+            print(f"Error: {e}")
+            print(f"Attempted path: {path}")
+            # Return a colored placeholder surface
+            surface = pygame.Surface((64, 64), pygame.SRCALPHA)
+            surface.fill((0, 128, 0))  # Green for missing NPC textures
+            pygame.draw.rect(surface, (0, 0, 0), surface.get_rect(), 2)  # Black border
+            return surface
     
     def update(self, player_x=None, player_y=None):
         """Update NPC state and position"""

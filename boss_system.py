@@ -1,6 +1,7 @@
 import pygame
 import math
 import random
+import os
 from tyranid_sprites import TyranidSprite
 
 class BossPhase:
@@ -202,6 +203,28 @@ class Boss(TyranidSprite):
         """Called when a timed phase ends"""
         # Handle phase timeout logic
         pass
+
+    def load_boss_sprite(self, sprite_name):
+        """Load a sprite for the boss"""
+        try:
+            # Get the project root directory
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.dirname(current_dir)
+            
+            # Construct the path to the sprite
+            path = os.path.join(project_root, "40000Warriors", "assets", sprite_name)
+            
+            # Load and return the sprite
+            return pygame.image.load(path).convert_alpha()
+        except pygame.error as e:
+            print(f"Unable to load boss sprite: {sprite_name}")
+            print(f"Error: {e}")
+            print(f"Attempted path: {path}")
+            # Return a colored placeholder surface
+            surface = pygame.Surface((128, 128), pygame.SRCALPHA)
+            surface.fill((128, 0, 128))  # Purple for missing boss textures
+            pygame.draw.rect(surface, (0, 0, 0), surface.get_rect(), 3)  # Black border
+            return surface
 
 class HiveTyrantBoss(Boss):
     """Specialized boss version of the Hive Tyrant"""

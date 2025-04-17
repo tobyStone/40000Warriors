@@ -29,11 +29,11 @@ class UISystem:
         
         # Fullscreen button
         self.fullscreen_button = Button(
-            self.screen_width - 100,
+            self.screen_width - 200,
             10,
-            90,
+            180,
             30,
-            "Fullscreen",
+            "Press F for Fullscreen",
             self.toggle_fullscreen
         )
         

@@ -235,12 +235,36 @@ class RoomManager:
                     x = (self.screen_width - scaled_portal.get_width()) // 2
                     y = (self.screen_height - scaled_portal.get_height()) // 2
                     surface.blit(scaled_portal, (x, y))
+    
+    def set_current_room(self, room_id):
+        """Set the current room without transition effects"""
+        if room_id in self.rooms:
+            self.current_room_id = room_id
+            self.is_transitioning = False
+            self.next_room_id = None
+            self.transition_progress = 0
+            return True
+        return False
 
 class Room:
     """Class representing a game room with background, entities, and transitions"""
-    def __init__(self, room_id, background_image=None):
+    def __init__(self, room_id, background_image=None, x=0, y=0, width=800, height=600):
         self.room_id = room_id
-        self.background = background_image
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.background = None
+        if background_image:
+            try:
+                self.background = pygame.image.load(os.path.join("assets", "backgrounds", background_image)).convert_alpha()
+                self.background = pygame.transform.scale(self.background, (width, height))
+            except pygame.error:
+                print(f"Could not load background image: {background_image}")
+                print(f"Attempted path: {os.path.join('assets', 'backgrounds', background_image)}")
+                self.background = pygame.Surface((width, height))
+                self.background.fill((50, 50, 50))
+        
         self.interior_3d = None
         self.enemies = []
         self.npcs = []
@@ -330,17 +354,17 @@ class Room:
         if self.interior_3d:
             self.interior_3d.draw(surface)
         elif self.background:
-            scaled_bg = pygame.transform.scale(self.background, (surface.get_width(), surface.get_height()))
-            surface.blit(scaled_bg, (0, 0))
+            surface.blit(self.background, (self.x, self.y))
         else:
-            surface.fill((50, 50, 50))
+            pygame.draw.rect(surface, (50, 50, 50), (self.x, self.y, self.width, self.height))
         
         for decor in self.decorations:
             if decor["image"]:
-                surface.blit(decor["image"], (decor["x"], decor["y"]))
+                surface.blit(decor["image"], (decor["x"] + self.x, decor["y"] + self.y))
             else:
                 pygame.draw.rect(surface, decor["color"],
-                                 (decor["x"], decor["y"], decor["width"], decor["height"]))
+                               (decor["x"] + self.x, decor["y"] + self.y,
+                                decor["width"], decor["height"]))
         
         for item in self.items:
             item.draw(surface)

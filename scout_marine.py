@@ -18,7 +18,17 @@ class ScoutMarine:
         self.direction = "right"
         self.health = 100
         self.max_health = 100
-        self.armor = 20  # Damage reduction
+        self.armor = 20  # Current armor value
+        self.max_armor = 100  # Maximum armor value
+        
+        # Ammo system
+        self.bolter_ammo = 30
+        self.plasma_ammo = 10
+        self.melta_ammo = 5
+        self.max_bolter_ammo = 120
+        self.max_plasma_ammo = 30
+        self.max_melta_ammo = 15
+        self.current_weapon = "bolter"  # Default weapon
         
         # Movement states
         self.is_moving = False
@@ -43,31 +53,28 @@ class ScoutMarine:
         self.attack_frame = 0
         
         # Load sprite
-        self.load_sprite("character\walk_right.png")
+        self.load_sprite("walk_right.png")
         
     def load_sprite(self, filename):
         """Load the sprite image"""
         try:
-            # Move two directories up from this file to get to 'repos'
-            repos_folder = os.path.dirname(os.path.dirname(__file__))
-
-            # Then explicitly join '40000Warriors'
-            project_root = os.path.join(repos_folder, "40000Warriors")
-
-            # Now join 'assets' + your filename
-            path = os.path.join(project_root, "assets", filename)
-
+            # Get the project root directory
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.dirname(current_dir)
+        
+            # Construct the path to the sprite with 'character' directory
+            path = os.path.join(project_root,"40000Warriors", "assets", "character", filename)
+        
             self.sprite = pygame.image.load(path).convert_alpha()
             self.sprite = pygame.transform.scale(self.sprite, (self.width, self.height))
             self.sprite_flipped = pygame.transform.flip(self.sprite, True, False)
-
         except pygame.error as e:
             print(f"Unable to load sprite: {filename}")
             print(f"Error: {e}")
             print(f"Attempted path: {path}")
             # Create a placeholder sprite
             self.sprite = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-            self.sprite.fill((0, 0, 255))  
+            self.sprite.fill((0, 0, 255))  # Blue placeholder
             self.sprite_flipped = pygame.transform.flip(self.sprite, True, False)
 
     
@@ -195,9 +202,16 @@ class ScoutMarine:
             in_direction = (dx > 0 and self.direction == "right") or (dx < 0 and self.direction == "left")
             
             if in_range and in_direction:
+                # Calculate damage based on distance (more damage up close)
+                distance_factor = 1 - (distance / self.attack_range)
+                actual_damage = self.attack_damage * distance_factor
+                
                 # Enemy takes damage
-                if enemy.take_damage(self.attack_damage):
+                if enemy.take_damage(actual_damage):
                     damaged_enemies.append(enemy)
+                    
+                # Visual feedback
+                self.spawn_damage_number(enemy_center_x, enemy_center_y, actual_damage)
         
         return damaged_enemies
     
@@ -207,21 +221,55 @@ class ScoutMarine:
         
         for bullet in self.bullets[:]:
             for enemy in enemies:
-                # Simple collision check
-                if (bullet["x"] > enemy.x and bullet["x"] < enemy.x + enemy.width and
-                    bullet["y"] > enemy.y and bullet["y"] < enemy.y + enemy.height):
+                # Improved collision check using rectangles
+                bullet_rect = pygame.Rect(bullet["x"] - bullet["radius"], 
+                                        bullet["y"] - bullet["radius"],
+                                        bullet["radius"] * 2, 
+                                        bullet["radius"] * 2)
+                enemy_rect = pygame.Rect(enemy.x, enemy.y, enemy.width, enemy.height)
+                
+                if bullet_rect.colliderect(enemy_rect):
+                    # Calculate damage based on weapon type
+                    damage = self.calculate_weapon_damage(bullet)
                     
                     # Enemy takes damage
-                    if enemy.take_damage(bullet["damage"]):
+                    if enemy.take_damage(damage):
                         hit_enemies.append(enemy)
+                    
+                    # Visual feedback
+                    self.spawn_damage_number(enemy.x + enemy.width/2, 
+                                          enemy.y + enemy.height/2, 
+                                          damage)
                     
                     # Remove bullet
                     if bullet in self.bullets:
                         self.bullets.remove(bullet)
+                        self.spawn_hit_effect(bullet["x"], bullet["y"])
                     
                     break
         
         return hit_enemies
+    
+    def calculate_weapon_damage(self, bullet):
+        """Calculate damage based on current weapon type"""
+        base_damage = bullet["damage"]
+        if self.current_weapon == "bolter":
+            return base_damage
+        elif self.current_weapon == "plasma":
+            return base_damage * 1.5  # Plasma does 50% more damage
+        elif self.current_weapon == "melta":
+            return base_damage * 2.0  # Melta does double damage
+        return base_damage
+    
+    def spawn_damage_number(self, x, y, damage):
+        """Create a floating damage number"""
+        # This is a placeholder - implement damage number system
+        pass
+    
+    def spawn_hit_effect(self, x, y):
+        """Create a hit effect at the given position"""
+        # This is a placeholder - implement hit effect system
+        pass
     
     def draw(self, surface):
         """Draw the scout marine"""

@@ -47,15 +47,28 @@ ASSETS_DIR = os.path.join(os.path.dirname(__file__), "assets")
 
 
 # Load images
-def load_image(filename):
+def load_image(filename, subfolder=None):
+    """Load an image from the assets folder"""
     try:
-        return pygame.image.load(os.path.join(ASSETS_DIR, filename)).convert_alpha()
-    except pygame.error:
+        # Get the project root directory
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(current_dir)
+        
+        # Construct the path to the sprite with 'character' directory
+        path = os.path.join(project_root,"40000Warriors", "assets", "character", filename)
+        
+        self.sprite = pygame.image.load(path).convert_alpha()
+        self.sprite = pygame.transform.scale(self.sprite, (self.width, self.height))
+        self.sprite_flipped = pygame.transform.flip(self.sprite, True, False)
+
+    except pygame.error as e:
         print(f"Unable to load image: {filename}")
-        # Return a fallback colored surface (magenta for missing textures)
-        surf = pygame.Surface((50, 50), pygame.SRCALPHA)
-        surf.fill((255, 0, 255))
-        return surf
+        print(f"Error: {e}")
+        print(f"Attempted path: {path}")
+        # Return a colored placeholder surface
+        surface = pygame.Surface((32, 32), pygame.SRCALPHA)
+        surface.fill((255, 0, 255))  # Magenta for missing textures
+        return surface
 
 class Game:
     def __init__(self):
@@ -69,7 +82,7 @@ class Game:
         self.game_paused = False
         
         # Player
-        self.player = ScoutMarine(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+        self.player = ScoutMarine(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2, SCREEN_WIDTH, SCREEN_HEIGHT)
         
         # UI
         self.ui = UISystem(SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -78,7 +91,7 @@ class Game:
         self.dialogue = DialogueSystem(SCREEN_WIDTH, SCREEN_HEIGHT)
         
         # Room system
-        self.room_manager = RoomManager()
+        self.room_manager = RoomManager(SCREEN_WIDTH, SCREEN_HEIGHT)
         self.setup_rooms()
         
         # Enemy system
@@ -129,23 +142,23 @@ class Game:
         boss_arena = Room("Boss Arena", "boss_arena.png", 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
         
         # Add rooms to manager
-        self.room_manager.add_room(main_hall)
-        self.room_manager.add_room(armory)
-        self.room_manager.add_room(chapel)
-        self.room_manager.add_room(boss_arena)
+        self.room_manager.add_room("main_hall", main_hall)
+        self.room_manager.add_room("armory", armory)
+        self.room_manager.add_room("chapel", chapel)
+        self.room_manager.add_room("boss_arena", boss_arena)
         
         # Create transitions
-        main_hall.add_exit(create_transition("armory", 700, 300, 100, 100))
-        main_hall.add_exit(create_transition("chapel", 300, 500, 100, 100))
-        armory.add_exit(create_transition("main_hall", 50, 300, 100, 100))
-        chapel.add_exit(create_transition("main_hall", 300, 50, 100, 100))
+        main_hall.add_transition(create_transition("door", 700, 300, 100, 100, "armory"))
+        main_hall.add_transition(create_transition("door", 300, 500, 100, 100, "chapel"))
+        armory.add_transition(create_transition("door", 50, 300, 100, 100, "main_hall"))
+        chapel.add_transition(create_transition("door", 300, 50, 100, 100, "main_hall"))
         
         # Set boss room
         self.boss_room = boss_arena
-        main_hall.add_exit(create_transition("boss_arena", 400, 50, 100, 100))
+        main_hall.add_transition(create_transition("door", 400, 50, 100, 100, "boss_arena"))
         
         # Set starting room
-        self.room_manager.set_current_room("Main Hall")
+        self.room_manager.set_current_room("main_hall")
     
     def spawn_enemy(self):
         """Spawn a new enemy"""
@@ -172,16 +185,30 @@ class Game:
             self.room_manager.set_current_room("Boss Arena")
     
     def check_bullet_collisions(self):
+        """Check for bullet collisions with enemies"""
         current_room = self.room_manager.get_current_room()
         if not current_room:
             return
-        hit_enemies = self.player.check_bullet_collisions(current_room.enemies)
+            
+        # Check collisions with regular enemies
+        hit_enemies = self.player.check_bullet_collisions(self.enemies)
         for enemy in hit_enemies:
-            if enemy in current_room.enemies:
-                current_room.enemies.remove(enemy)
-                self.kills += 1
-                self.ui.increment_kills()
-                self.ui.add_message(f"Enemy eliminated! ({self.kills} kills)", (0, 255, 0))
+            if enemy in self.enemies:
+                if enemy.health <= 0:
+                    self.enemies.remove(enemy)
+                    self.kills += 1
+                    self.ui.increment_kills()
+                    self.ui.add_message(f"Enemy eliminated! ({self.kills} kills)", (0, 255, 0))
+        
+        # Check collisions with boss if present
+        if self.current_boss and self.boss_active:
+            boss_hits = self.player.check_bullet_collisions([self.current_boss])
+            if boss_hits and self.current_boss in boss_hits:
+                if self.current_boss.health <= 0:
+                    self.current_boss = None
+                    self.boss_active = False
+                    self.game_won = True
+                    self.ui.add_message("Boss defeated!", (255, 215, 0))  # Gold color
     
     def check_melee_attack(self):
         if not self.player.is_attacking:
@@ -198,10 +225,8 @@ class Game:
                 self.ui.add_message(f"Enemy slain in melee! ({self.kills} kills)", (0, 255, 0))
     
     def check_enemy_collisions(self):
-        current_room = self.room_manager.get_current_room()
-        if not current_room:
-            return
-        for enemy in current_room.enemies:
+        """Check for collisions between player and enemies"""
+        for enemy in self.enemies:
             if (self.player.x < enemy.x + enemy.width and
                 self.player.x + self.player.width > enemy.x and
                 self.player.y < enemy.y + enemy.height and
@@ -300,12 +325,38 @@ class Game:
         """Toggle between windowed and fullscreen mode"""
         self.is_fullscreen = not self.is_fullscreen
         if self.is_fullscreen:
-            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-            # Update UI system with new screen dimensions
-            self.ui = UISystem(self.screen.get_width(), self.screen.get_height())
+            # Get the current display info
+            display_info = pygame.display.Info()
+            new_width = display_info.current_w
+            new_height = display_info.current_h
+            
+            # Set fullscreen mode
+            self.screen = pygame.display.set_mode((new_width, new_height), pygame.FULLSCREEN)
+            
+            # Update all systems with new screen dimensions
+            self.ui = UISystem(new_width, new_height)
+            self.dialogue = DialogueSystem(new_width, new_height)
+            self.room_manager = RoomManager(new_width, new_height)
+            self.player.screen_width = new_width
+            self.player.screen_height = new_height
+            
+            # Update global screen dimensions
+            global SCREEN_WIDTH, SCREEN_HEIGHT
+            SCREEN_WIDTH = new_width
+            SCREEN_HEIGHT = new_height
         else:
+            # Reset to windowed mode
             self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+            
+            # Reset all systems to original dimensions
             self.ui = UISystem(SCREEN_WIDTH, SCREEN_HEIGHT)
+            self.dialogue = DialogueSystem(SCREEN_WIDTH, SCREEN_HEIGHT)
+            self.room_manager = RoomManager(SCREEN_WIDTH, SCREEN_HEIGHT)
+            self.player.screen_width = SCREEN_WIDTH
+            self.player.screen_height = SCREEN_HEIGHT
+        
+        # Restore room setup after changing dimensions
+        self.setup_rooms()
 
     def handle_events(self):
         """Handle pygame events"""
@@ -313,7 +364,7 @@ class Game:
             if event.type == pygame.QUIT:
                 return False
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_F11:
+                if event.key == pygame.K_f:
                     self.toggle_fullscreen()
                 if event.key == pygame.K_ESCAPE:
                     return False
@@ -326,7 +377,7 @@ class Game:
                         self.interact_with_npc()
                     if event.key == pygame.K_SPACE:
                         self.activate_room_transition()
-                    if event.key == pygame.K_f:
+                    if event.key == pygame.K_v:
                         self.player.melee_attack()
                     if event.key == pygame.K_r:
                         self.reload()
@@ -339,29 +390,52 @@ class Game:
                         self.dialogue.select_next_response()
                     elif event.key == pygame.K_SPACE:
                         self.dialogue.skip_animation()
+        
+        # Handle continuous movement with arrow keys
+        if not self.game_over and not self.game_paused and not self.game_won and not self.dialogue.active:
+            keys = pygame.key.get_pressed()
+            dx = 0
+            dy = 0
+            if keys[pygame.K_LEFT]:
+                dx -= self.player.velocity
+            if keys[pygame.K_RIGHT]:
+                dx += self.player.velocity
+            if keys[pygame.K_UP]:
+                dy -= self.player.velocity
+            if keys[pygame.K_DOWN]:
+                dy += self.player.velocity
+            
+            # Apply movement if any direction key is pressed
+            if dx != 0 or dy != 0:
+                self.player.move(dx, dy)
+            
+            # Handle shooting with left mouse button
+            if pygame.mouse.get_pressed()[0]:  # Left mouse button
+                self.player.shoot()
+        
         return True
 
     def update(self):
         """Update game state"""
         if not self.handle_events():
             return False
-        
+            
         if self.game_over or self.game_paused:
             return True
-        
+            
         # Update game timer
         current_time = pygame.time.get_ticks()
         self.game_timer += current_time - self.last_update_time
         self.last_update_time = current_time
         
+        # Update room manager and current room
+        self.room_manager.update()
+        
         # Update player
         self.player.update()
         
-        # Update current room
-        self.room_manager.update_current_room()
-        
         # Update enemies
-        for enemy in self.enemies[:]:
+        for enemy in self.enemies[:]:  # Use slice copy to safely remove during iteration
             enemy.update()
             if enemy.health <= 0:
                 self.enemies.remove(enemy)
@@ -385,9 +459,9 @@ class Game:
         
         # Update NPCs
         for npc in self.npcs:
-            npc.update(self.player.x, self.player.y)
+            npc.update()
         
-        # Check collisions
+        # Check collisions and interactions
         self.check_bullet_collisions()
         self.check_melee_attack()
         self.check_enemy_collisions()
@@ -395,17 +469,17 @@ class Game:
         self.check_room_transitions()
         self.pickup_manager.check_collisions(self.player)
         
-        # Update UI
+        # Update UI with current player stats
         self.ui.update_player_health(self.player.health, self.player.max_health)
         self.ui.update_player_armor(self.player.armor, self.player.max_armor)
-        self.ui.update_ammo(self.player.current_ammo, self.player.max_ammo)
+        self.ui.update_ammo(self.ammo, self.max_ammo)
         
         return True
     
     def draw(self):
         """Draw the game"""
         # Draw current room
-        self.room_manager.draw_current_room(self.screen)
+        self.room_manager.draw(self.screen)
         
         # Draw pickups
         self.pickup_manager.draw(self.screen)
@@ -468,7 +542,7 @@ class Game:
         screen.blit(overlay, (0, 0))
         
         font = pygame.font.SysFont('Arial', 60)
-        text = font.render("GAME OVER", True, RED)
+        text = font.render("GAME OVER MAN GAME OVER", True, RED)
         text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
         screen.blit(text, text_rect)
         
